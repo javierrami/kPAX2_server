@@ -6,3 +6,13 @@ body {
 a {
   color: #00B7FF;
 }
+
+h5{
+	color: white;
+}
+
+.well{
+	background: #999;
+	padding: 1em;
+	
+}
