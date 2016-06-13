@@ -22,12 +22,12 @@ MONGODB_URL="mongodb://readwrite:1234@ds021462.mlab.com:21462/kpax2" bin/www
 ## Test Endpoints
 
 ### list users GET
- 
+
 http://localhost:3000/user/list
 
 
 ### add user POST
- 
+
 http://localhost:3000/user
 
 BODY
@@ -56,7 +56,7 @@ http://localhost:3000/game/list
 
 
 ### add game POST
- 
+
 http://localhost:3000/user
 
 BODY
@@ -80,4 +80,3 @@ RESPONSE
   "_id": "5757ba3f8d7c2e6c46484ac5"
 }
 ```
-
