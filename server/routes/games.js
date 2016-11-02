@@ -2,8 +2,6 @@ var express = require('express');
 var router = express.Router();
 var {ObjectId} = require('mongodb'); //like ObjectId=require('mongodb').ObjectId;
 
-var auxliar = require ('./aux.js');  // Imports aux functions
-
 /**
  * Add a new game
  */
@@ -13,9 +11,6 @@ router.post('/', function (req, res) {
 	if (!req.body.name || !req.body.owner) {
 		// 400 - bad request
 		return res.status(400).send('Bad parameters')
-
-
-
 	}
 
 	// find game
@@ -74,22 +69,21 @@ router.get('/list', function(req, res, next) {
 
 	console.log("games/list endpoint! Query Chain passed: %s",req.query.q);
 
-	if (typeof(req.query.q) != 'undefined' )
-		{
-		 	if (auxliar.IsJsonString(req.query.q) ) {
-		 		console.log('Query condition:q=  %s ', req.query.q)
-				var gameQuery = JSON.parse(req.query.q);
-				}
-				else
-				{
-					console.log(' Bad JSON format, NO Query Done!: NO records listed')
-					var gameQuery = {"_id":null};
-				}
-		} else {
-		  	console.log(' q Query condition not defined: all records listed')
-			var gameQuery = {};
+	var gameQuery = null;
+	if (typeof(req.query.q) != 'undefined' ) {
+		console.log('Query condition:q=  %s ', req.query.q);
 
-		};
+		try {
+			gameQuery = JSON.parse(req.query.q);
+		}
+		catch (e) {
+			console.log(' Bad JSON format, NO Query Done!: NO records listed');
+			gameQuery = { '_id': null };
+		}
+	} else {
+		console.log(' q Query condition not defined: all records listed');
+		gameQuery = {};
+	};
 
 	console.log('JSON Query passed: ', gameQuery);
 

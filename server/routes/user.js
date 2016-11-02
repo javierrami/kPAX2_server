@@ -2,8 +2,6 @@ var express = require('express');
 var router = express.Router();
 var {ObjectId} = require('mongodb'); //like ObjectId=require('mongodb').ObjectId;
 
-var auxliar = require ('./aux.js');  // Imports aux functions 
-
 /**
  * Add a new user
  */
@@ -64,8 +62,8 @@ router.post('/', function (req, res) {
 
 
  /**
- * list users under a FREE condition 
- * if no parameter passed, all users ar listed 
+ * list users under a FREE condition
+ * if no parameter passed, all users ar listed
  * the 'q' query must be a valid JSON query condition in MongoBD format
  * endpoint method: GET
  * example : /users/list?q={"status":3}
@@ -75,28 +73,26 @@ router.get('/list', function(req, res, next) {
 
 	console.log("games/list endpoint! Query Chain passed: %s",req.query.q);
 
-	if (typeof(req.query.q) != 'undefined' )
-		{
-		 	if (auxliar.IsJsonString(req.query.q) ) {
-		 		console.log('Query condition:q=  %s ', req.query.q)
-				var userQuery = JSON.parse(req.query.q);
-				}
-				else 
-				{
-					console.log(' Bad JSON format, NO Query Done!: NO records listed')
-					var userQuery = {"_id":null};
-				}	
-		} else {
-		  	console.log(' q Query condition not defined: all records listed')
-			var userQuery = {};
+	var userQuery = null;
+	if (typeof(req.query.q) != 'undefined' ) {
+		console.log('Query condition:q=  %s ', req.query.q);
 
-		};
+		try {
+			userQuery = JSON.parse(req.query.q);
+		}
+		catch (e) {
+			console.log(' Bad JSON format, NO Query Done!: NO records listed');
+			userQuery = { '_id': null };
+		}
+	} else {
+		console.log(' q Query condition not defined: all records listed');
+		userQuery = {};
+	};
 
 	console.log('JSON Query passed: ', userQuery);
 
 	// find user
 	req.db.collection('users').find(
-		//{},
 		userQuery,
 		function (err, cursor) {
 
@@ -161,7 +157,7 @@ router.get('/listall', function(req, res, next) {
  * list ONE user (by Id of the user)
  * parameter: user
  * GET /user/:user
- * 
+ *
  * Example: http://localhost:3000/user/57546d42ff435e591d083d04
  */
 router.get('/:user', function(req, res, next) {
@@ -207,11 +203,11 @@ router.get('/:user', function(req, res, next) {
 
 
 /**
- * 
- * Set a USER unavailable (status : '3' => deleted) 
+ *
+ * Set a USER unavailable (status : '3' => deleted)
  * POST   /user/del
  * parameter:  user  (game id)
- * 
+ *
  */
 router.post('/del', function (req, res) {
 
@@ -233,7 +229,7 @@ router.post('/del', function (req, res) {
 			// if error, return
 			if (err) {
 				// 500
-				return res.status(500).send(err.message); 
+				return res.status(500).send(err.message);
 			}
 			// if NOT found, update
 			else if (!doc) {
@@ -267,7 +263,7 @@ router.post('/del', function (req, res) {
 			console.log(doc)
 
 			}
-			
+
 
 		}
 	) // find one
@@ -297,19 +293,3 @@ router.get('/', function(req, res, next) {
 });
 
 module.exports = router;
-
-
-
-/*
-// Aux Function
-function IsJsonString(str) {
-	// For testing if str is a well formed JSON chain 
-    try {
-        JSON.parse(str);
-    } catch (e) {
-        return false;
-    }
-    return true;
-}
-
-*/
