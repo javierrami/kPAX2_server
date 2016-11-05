@@ -2,6 +2,8 @@ var express = require('express');
 var router = express.Router();
 var ObjectId = require('mongodb').ObjectId;
 
+const utils = require('./utils');
+
 const debug = require('debug')('app:games');
 
 /**
@@ -10,8 +12,8 @@ const debug = require('debug')('app:games');
 router.post('/', function (req, res) {
 
   // check parameters
-  if (!req.body.name || !req.body.owner) {
-    // 400 - bad request
+  //DEL if (!req.body.name || !req.body.owner) {
+  if (!checkParams(req, ['name', 'owner'])) {
     return res.status(400).send('Bad parameters');
   }
 
@@ -19,21 +21,16 @@ router.post('/', function (req, res) {
   req.db.collection('games').findOne(
     { name: req.body.name },
     function (err, doc) {
+      // if error, return 500
+      if (err) return res.status(500).send('Error when db.findOne ' + err.message);
 
-      // if error, return
-      if (err) {
-        // 500
-        return res.status(500).send(err.message);
-      }
+      // game already exists
+      if (doc) return res.status(409).send('Already exists');
 
-      if (doc) {
-        // 400 - conflict
-        return res.status(409).send('game ' + req.body.name  + 'already exists');
-      }
-
-      var now = new Date();
+      // TODO check the user already exists and status == 1
 
       // create new game - only a few of fields
+      var now = new Date();
       var game = {
         name: req.body.name,
         owner: req.body.owner,
@@ -47,12 +44,10 @@ router.post('/', function (req, res) {
       req.db.collection('games').insert(
         game,
         function (err, doc) {
-          // if error, return
-          if (err) {
-            // 500
-            return res.status(500).send(err.message);
-          }
+          // if error, return 500
+          if (err) return res.status(500).send('Error when db.insert ' + err.message);
 
+          debug(game);
           res.jsonp(game);
         }
       );  // Insert
@@ -69,11 +64,11 @@ router.post('/', function (req, res) {
  */
 router.get('/list', function (req, res, next) {
 
-  debug('games/list endpoint! Query Chain passed: %s', req.query.q);
+  debug('games/list endpoint! Query Chain passed:', req.query.q);
 
-  var gameQuery = null;
-  if (typeof (req.query.q) != 'undefined') {
-    debug('Query condition:q=  %s ', req.query.q);
+  var gameQuery = {};
+  if (req.query.q) {
+    debug('Query condition:q=', req.query.q);
 
     try {
       gameQuery = JSON.parse(req.query.q);
@@ -82,9 +77,6 @@ router.get('/list', function (req, res, next) {
       debug(' Bad JSON format, NO Query Done!: NO records listed');
       gameQuery = { _id: null };
     }
-  } else {
-    debug(' q Query condition not defined: all records listed');
-    gameQuery = {};
   };
 
   debug('JSON Query passed: ', gameQuery);
@@ -93,19 +85,14 @@ router.get('/list', function (req, res, next) {
   req.db.collection('games').find(
     gameQuery,
     function (err, cursor) {
-
-      // check error
-      if (err) {
-        return res.status(500).send(err.message);
-      }
-
-      var games = [];
+      // if error, return 500
+      if (err) return res.status(500).send('Error when db.find ' + err.message);
 
       // walk cursor
+      var games = [];
       cursor.each(function (err, doc) {
-
-        // end
         if (doc == null) {
+          debug(games);
           return res.jsonp(games);
         }
 
@@ -115,191 +102,183 @@ router.get('/list', function (req, res, next) {
   );
 });
 
-/**
- * list ALL the games in the system
- * No parameters needed
- * endpoint: GET   /games/lista
- */
-router.get('/listall', function (req, res, next) {
-  // find game
-  req.db.collection('games').find(
-    {},
-    function (err, cursor) {
-
-      // check error
-      if (err) {
-        return res.status(500).send(err.message);
-      }
-
-      var games = [];
-
-      // walk cursor
-      cursor.each(function (err, doc) {
-
-        // end
-        if (doc == null) {
-          return res.jsonp(games);
-        }
-
-        games.push(doc);
-      });
-    }
-  );
-});
+//DEL
+// /**
+//  * list ALL the games in the system
+//  * No parameters needed
+//  * endpoint: GET   /games/lista
+//  */
+// router.get('/listall', function (req, res, next) {
+//   // find game
+//   req.db.collection('games').find(
+//     {},
+//     function (err, cursor) {
+//
+//       // check error
+//       if (err) {
+//         return res.status(500).send(err.message);
+//       }
+//
+//       var games = [];
+//
+//       // walk cursor
+//       cursor.each(function (err, doc) {
+//
+//         // end
+//         if (doc == null) {
+//           return res.jsonp(games);
+//         }
+//
+//         games.push(doc);
+//       });
+//     }
+//   );
+// });
 
 /**
  * list ONE game (by Id of the Game)
  * parameter: game
  * GET /game/:game
  */
-router.get('/:game', function (req, res, next) {
-  var gameId = req.params.game;
+router.get('/:id', function (req, res, next) {
+  var gameId = req.params.id;
   debug(gameId);
 
   // find game
   req.db.collection('games').find(
     { _id: new ObjectId(gameId) },
+    function (err, doc) {
+      // if error, return 500
+      if (err) return res.status(500).send('Error when db.find ' + err.message);
 
-    function (err, cursor) {
+      // Game not found
+      if (!doc) return res.status(404).send('Not found');
 
-      // check error
-      if (err) {
-        return res.status(500).send(err.message);
-      }
-
-      var games = [];
-
-      // walk cursor
-      cursor.each(function (err, doc) {
-
-        // end
-        if (doc == null) {
-          return res.jsonp(games);
-        }
-
-        games.push(doc);
-      });
+      debug(doc);
+      return res.jsonp(doc);
     }
   );
 });
 
-/**
- *
- * Simple ADD like ( just increases by 1 nlike counter)
- * PUT   /game/like
- * parameter:  name  (game name)
- *
- */
-router.put('/like', function (req, res) {
+//DEL
+// /**
+//  *
+//  * Simple ADD like ( just increases by 1 nlike counter)
+//  * PUT   /game/like
+//  * parameter:  name  (game name)
+//  *
+//  */
+// router.put('/like', function (req, res) {
+//
+//   // check parameters
+//   if (!req.body.name) {
+//     // 400 - bad request
+//     debug('** No Parameters. Game name required');
+//     return res.status(400).send('Bad parameters. Game name required ');
+//
+//   }
+//
+//   // find game
+//   req.db.collection('games').findOne(
+//     { name: req.body.name },
+//     function (err, doc) {
+//
+//       // if error, return
+//       if (err) {
+//         // 500
+//         return res.status(500).send(err.message);
+//       }
+//
+//       if (!doc) {
+//         // Game not Found
+//         return res.status(404).send('game ' + req.body.name  + 'NOT exists');
+//       }
+//
+//       // game found -- UPdate nlikes +1
+//       req.db.collection('games').update(
+//         { name: req.body.name },
+//         { $inc: { nlikes: +1 } },
+//         true,
+//         true,
+//         function (err, doc) {
+//           // if error, return
+//           if (err) {
+//             // 500
+//             return res.status(500).send(err.message);
+//           }
+//
+//           res.jsonp(doc); // put ENDs ; sends a response needed to END the Update.  Response with a record updated info
+//           debug(doc);
+//         }
+//       );  // update end
+//     }
+//   ); // find one
+// });
 
-  // check parameters
-  if (!req.body.name) {
-    // 400 - bad request
-    debug('** No Parameters. Game name required');
-    return res.status(400).send('Bad parameters. Game name required ');
-
-  }
-
-  // find game
-  req.db.collection('games').findOne(
-    { name: req.body.name },
-    function (err, doc) {
-
-      // if error, return
-      if (err) {
-        // 500
-        return res.status(500).send(err.message);
-      }
-
-      if (!doc) {
-        // Game not Found
-        return res.status(404).send('game ' + req.body.name  + 'NOT exists');
-      }
-
-      // game found -- UPdate nlikes +1
-      req.db.collection('games').update(
-        { name: req.body.name },
-        { $inc: { nlikes: +1 } },
-        true,
-        true,
-        function (err, doc) {
-          // if error, return
-          if (err) {
-            // 500
-            return res.status(500).send(err.message);
-          }
-
-          res.jsonp(doc); // put ENDs ; sends a response needed to END the Update.  Response with a record updated info
-          debug(doc);
-        }
-      );  // update end
-    }
-  ); // find one
-});
-
-/**
- *  'Complex' ADD like && Plus user / Date info
- *  POST  /game/like
- *   Parameters: user , game
- *  nlike ++
- *  additional info of user and date of 'like' added
- *  a user can add as much likes as he wants with this endpoint
- */
-router.post('/likeOld', function (req, res) {
-
-  // check parameters
-  if (!req.body.game || !req.body.user) {
-    // 400 - bad request
-    debug('** No Parameters. Game name required');
-    return res.status(400).send('Bad parameters. Game name required ');
-  }
-
-  var gameId = req.body.game;
-  var userId = req.body.user;
-
-  // find game
-  req.db.collection('games').findOne(
-    { _id: new ObjectId(gameId) },
-
-    function (err, doc) {
-
-      // if error, return
-      if (err) {
-        // 500
-        return res.status(500).send(err.message);
-      }
-
-      if (!doc) {
-        // Game not Found
-        return res.status(404).send('game ' + req.body.name  + ' NOT exists');
-      }
-
-      // game found -- UPdate nlikes +1
-
-      var userDateInfo = { uid: userId, date: new Date() };
-      req.db.collection('games').update(
-        { _id: new ObjectId(gameId) },
-        {
-          $inc: { nlikes: +1 },
-          $push: { ulike: userDateInfo }
-        },
-          true,
-          true,
-        function (err, doc) {
-          // if error, return
-          if (err) {
-            // 500
-            return res.status(500).send(err.message);
-          }
-
-          res.jsonp(doc); // post ENDs ; sends a response needed to END the Update.  Response with a record updated info
-          debug(doc);
-
-        }
-      ); // update end
-    }
-  ); // find one
-});
+//DEL
+// /**
+//  *  'Complex' ADD like && Plus user / Date info
+//  *  POST  /game/like
+//  *   Parameters: user , game
+//  *  nlike ++
+//  *  additional info of user and date of 'like' added
+//  *  a user can add as much likes as he wants with this endpoint
+//  */
+// router.post('/likeOld', function (req, res) {
+//
+//   // check parameters
+//   if (!req.body.game || !req.body.user) {
+//     // 400 - bad request
+//     debug('** No Parameters. Game name required');
+//     return res.status(400).send('Bad parameters. Game name required ');
+//   }
+//
+//   var gameId = req.body.game;
+//   var userId = req.body.user;
+//
+//   // find game
+//   req.db.collection('games').findOne(
+//     { _id: new ObjectId(gameId) },
+//
+//     function (err, doc) {
+//
+//       // if error, return
+//       if (err) {
+//         // 500
+//         return res.status(500).send(err.message);
+//       }
+//
+//       if (!doc) {
+//         // Game not Found
+//         return res.status(404).send('game ' + req.body.name  + ' NOT exists');
+//       }
+//
+//       // game found -- UPdate nlikes +1
+//
+//       var userDateInfo = { uid: userId, date: new Date() };
+//       req.db.collection('games').update(
+//         { _id: new ObjectId(gameId) },
+//         {
+//           $inc: { nlikes: +1 },
+//           $push: { ulike: userDateInfo }
+//         },
+//           true,
+//           true,
+//         function (err, doc) {
+//           // if error, return
+//           if (err) {
+//             // 500
+//             return res.status(500).send(err.message);
+//           }
+//
+//           res.jsonp(doc); // post ENDs ; sends a response needed to END the Update.  Response with a record updated info
+//           debug(doc);
+//
+//         }
+//       ); // update end
+//     }
+//   ); // find one
+// });
 
 /**
  *
@@ -308,72 +287,35 @@ router.post('/likeOld', function (req, res) {
  * parameter:  game  (game id)
  *
  */
-router.post('/del', function (req, res) {
-
-  // check parameters
-  if (!req.body.game) {
-    // 400 - bad request
-    debug('** No Parameters. Game name required');
-    return res.status(400).send('Bad parameters. Game Id required ');
-  }
-
-  var gameId = req.body.game;
+router.delete('/:id', function (req, res) {
+  var gameId = req.params.id;
 
   // find game
   req.db.collection('games').findOne(
     { _id: new ObjectId(gameId) },
     function (err, doc) {
+      // if error, return 500
+      if (err) return res.status(500).send('Error when db.findOne ' + err.message);
 
-      // if error, return
-      if (err) {
-        // 500
-        return res.status(500).send(err.message);
-      }
-
-      // if NOT found, update
-      if (!doc) {
-        // Game not Found
-        return res.status(404).send('Game ' + req.body.game  + 'NOT exists');
-      }
+      // Game not found
+      if (!doc) return res.status(404).send('Not Found');
 
       // game found -- UPdate status: set to 3 => Deleted
       req.db.collection('games').update(
         { _id: new ObjectId(gameId) },
-        {
-          $set: { status: 3 }
-        },
-          true,
-          true,
+        { $set: { status: 3 } },
+        true,
+        true,
         function (err, doc) {
-          // if error, return
-          if (err) {
-            // 500
-            return res.status(500).send(err.message);
-          }
+          // if error, return 500
+          if (err) return res.status(500).send('Error when db.update ' + err.message);
 
-          res.jsonp(doc); // delete ENDs ; sends a response needed to END the Update.  Response with a record updated info
           debug(doc);
+          res.jsonp(doc);
         }
       );  // update end
     }
   ); // find one
-});
-
-//*
-
-/* GET games listing. */
-router.get('/', function (req, res, next) {
-  res.send('respond with a resource');
-});
-
-/* GET param listing. */
-router.get('/:param1/likeTest', function (req, res, next) {
-  res.send('respond with a resource. The param passed to the endpoint : ' + req.params.param1);
-});
-
-/* POST with param in URL . */
-router.post('/:param1/unlikeTest', function (req, res, next) {
-  res.send('respond with a resource. The param passed to the endpoint : ' + req.params.param1 + ' doesnt like to mr: ' + req.body.user + ' \r\n');
 });
 
 // **  like A (very complex nlike marker)
@@ -410,63 +352,36 @@ router.post('/:game/like', function (req, res) {
     { _id: new ObjectId(gameId) },
 
     function (err, doc) {
+      // if error, return 500
+      if (err) return res.status(500).send('Error when db.findOne ' + err.message);
 
-      // if error, return
-      if (err) {
-        // 500
-        return res.status(500).send(err.message);
-      }
-
-      // if NOT error, update
-      if (!doc) {
-        // Game not Found
-        return res.status(400).send('game ' + req.params.game + ' NOT exists');
-      }
+      // Game not found
+      if (!doc) return res.status(404).send('Not found');
 
       // comprovam si l'usuari té ja aquest like enregistrat
       req.db.collection('games').findOne(
         { _id: ObjectId(gameId), 'ulike.uid': userId },
-        function (err, doc) {
+        function (err, docLike) {
+          // if error, return 500
+          if (err) return res.status(500).send('Error when db.findOne ' + err.message);
 
-          // if error, return
-          if (err) {
-            // 500
-            return res.status(500).send(err.message);
-          }
+          // Already marked +1
+          if (docLike) return res.jsonp(doc);
 
-          // if NOT error, update
-          if (doc) {
-            // Game + user like found
-            debug('ATENTION PLEASE: The user: ' +  userId  + '  are repeating the like for the game:  ' + gameId + ' Nothing done!! \r\n');
-
-            // Do nothing here
-            return res.jsonp(doc);
-
-            //return res.status(404).send('This like is still reported Game: ' + gameId  + ' user ' + userId + '\r\n');
-          }
-
-          // el juego existe  y
-          // El usuario todavia no ha reportado ningun like --> UPdate nlikes +1
-          // registrar usuario y fecha/hora del like
-
-          var userDateInfo = { uid: userId, date: new Date() };
           req.db.collection('games').update(
             { _id: new ObjectId(gameId) },
             {
               $inc: { nlikes: +1 },
-              $push: { ulike: userDateInfo }
+              $push: { ulike: { uid: userId, date: new Date() } }
             },
             true,
             true,
             function (err, doc) {
-              // if error, return
-              if (err) {
-                // 500
-                return res.status(500).send(err.message);
-              }
+              // if error, return 500
+              if (err) return res.status(500).send('Error when db.update ' + err.message);
 
-              res.jsonp(doc); // post ENDs ; sends a response needed to END the Update.  Response with a record updated info
               debug(doc);
+              res.jsonp(doc);
             }
           );  // update end
         }
@@ -500,48 +415,22 @@ router.post('/:game/unlike', function (req, res) {
     { _id: new ObjectId(gameId) },
 
     function (err, doc) {
+      // if error, return 500
+      if (err) return res.status(500).send('Error when db.findOne ' + err.message);
 
-      // if error, return
-      if (err) {
-        // 500
-        return res.status(500).send(err.message);
-      }
-
-      // if NOT error, update
-      if (!doc) {
-        // Game not Found
-        return res.status(400).send('game ' + req.params.game + ' NOT exists');
-      }
+      // Game not found
+      if (!doc) return res.status(404).send('Not found');
 
       // game found -- UPdate nlikes -1
       // comprovam si l'usuari té ja aquest like enregistrat
       req.db.collection('games').findOne(
-        {
-          _id: ObjectId(gameId),
-          'ulike.uid': userId
-        },
-        function (err, doc) {
+        { _id: ObjectId(gameId), 'ulike.uid': userId },
+        function (err, docLike) {
+          // if error, return 500
+          if (err) return res.status(500).send('Error when db.findOne ' + err.message);
 
-          // if error, return
-          if (err) {
-            // 500
-            return res.status(500).send(err.message);
-          }
-
-          // if NOT error, update
-          if (!doc) {
-            // el juego existe  y
-            // El usuario todavia no ha reportado ningun like --> UPdate nlikes +1
-            // registrar usuario y fecha/hora del like
-            debug('ATENTION PLEASE: The user: ' +  userId  + '  never marked the game:  ' + gameId + ' with a like!. Nothing to do here!! \r\n');
-
-            // do nothing HERE
-            return res.jsonp({});
-          }
-
-          // Game + user like found
-
-          // UNMARK THE LIKE + DECREASE THE LIKE MARKER BY ONE
+          // If not document, user never marked +1
+          if (!docLike) return res.jsonp(doc);
 
           // var userDateInfo = {'uid': userId, 'date': new Date()};
           req.db.collection('games').update(
@@ -550,21 +439,15 @@ router.post('/:game/unlike', function (req, res) {
               $inc: { nlikes: -1 },
               $pull: { ulike: { uid: userId } }
             },
-            { multi: true },
+            { multi: true }, // TODO: why multi?
             function (err, doc) {
-              // if error, return
-              if (err) {
-                // 500
-                return res.status(500).send(err.message);
-              }
+              // if error, return 500
+              if (err) return res.status(500).send('Error when db.update ' + err.message);
 
-              res.jsonp(doc); // post ENDs ; sends a response needed to END the Update.  Response with a record updated info
               debug(doc);
+              res.jsonp(doc);
             }
           );
-
-          // update end
-          //return res.status(404).send('This like is still reported Game: ' + gameId  + ' user ' + userId + '\r\n');
         }
       ); // FindOne  (gameId + userId)
     }

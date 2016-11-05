@@ -2,6 +2,8 @@ var express = require('express');
 var router = express.Router();
 var ObjectId = require('mongodb').ObjectId;
 
+const utils = require('./utils');
+
 const debug = require('debug')('app:user');
 
 /**
@@ -10,10 +12,8 @@ const debug = require('debug')('app:user');
 router.post('/', function (req, res) {
 
   // check parameters
-  if (!req.body.login || !req.body.name) {
-    // 400 - bad request
-    debug('LOGIN: %s', req.body.login);
-    debug('NAME: %s', req.body.name);
+  //DEL if (!req.body.login || !req.body.name) {
+  if (!checkParams(req, ['login', 'name'])) {
     return res.status(400).send('Bad parameters');
   }
 
@@ -21,21 +21,14 @@ router.post('/', function (req, res) {
   req.db.collection('users').findOne(
     { login: req.body.login },
     function (err, doc) {
+      // if error, return 500
+      if (err) return res.status(500).send('Error when db.findOne ' + err.message);
 
-      // if error, return
-      if (err) {
-        // 500
-        return res.status(500).send(err.message);
-      }
-
-      if (doc) {
-        // 400 - conflict
-        return res.status(409).send('User already exists');
-      }
-
-      var now = new Date();
+      // User already exists
+      if (doc) return res.status(409).send('Already exists');
 
       // crete new user - only wanted fields
+      var now = new Date();
       var user = {
         login: req.body.login,
         name: req.body.name,
@@ -48,17 +41,15 @@ router.post('/', function (req, res) {
       req.db.collection('users').insert(
         user,
         function (err, doc) {
-          // if error, return
-          if (err) {
-            // 500
-            return res.status(500).send(err.message);
-          }
+          // if error, return 500
+          if (err) return res.status(500).send('Error when db.insert ' + err.message);
 
+          debug(user);
           res.jsonp(user);
         }
       );
     }
-  ); // find one
+  );
 });
 
 /**
@@ -68,46 +59,38 @@ router.post('/', function (req, res) {
  * endpoint method: GET
  * example : /users/list?q={"status":3}
  */
+router.get('/list', function (req, res) {
 
-router.get('/list', function (req, res, next) {
+  debug('/game/list. Query Chain passed:', req.query.q);
 
-  debug('/game/list. Query Chain passed: %s', req.query.q);
-
-  var userQuery = null;
-  if (typeof (req.query.q) != 'undefined') {
-    debug('Query condition:q=  %s ', req.query.q);
+  // read user query. All users by default
+  var userQuery = {};
+  if (req.query.q) {
 
     try {
       userQuery = JSON.parse(req.query.q);
     }
     catch (e) {
       debug(' Bad JSON format, NO Query Done!: NO records listed');
-      userQuery = { _id: 0 };
+      userQuery = { _id: null };
     }
-  } else {
-    debug(' q Query condition not defined: all records listed');
-    userQuery = {};
   };
 
   debug('JSON Query passed: ', userQuery);
 
-  // find user
+  // find users
   req.db.collection('users').find(
     userQuery,
     function (err, cursor) {
+      // if error, return 500
+      if (err) return res.status(500).send('Error when db.find ' + err.message);
 
-      // check error
-      if (err) {
-        return res.status(500).send(err.message);
-      }
-
+      // walk the cursor
       var users = [];
-
-      // walk cursor
       cursor.each(function (err, doc) {
 
-        // end
         if (doc == null) {
+          debug(users);
           return res.jsonp(users);
         }
 
@@ -117,37 +100,38 @@ router.get('/list', function (req, res, next) {
   );
 });
 
-/**
- * list users (all users in the system, whatever is them status )
- * URL example:  METHOD: GET
- * http://localhost:3000/user/lista
- */
-router.get('/listall', function (req, res, next) {
-  // find user
-  req.db.collection('users').find(
-    {},
-    function (err, cursor) {
-
-      // check error
-      if (err) {
-        return res.status(500).send(err.message);
-      }
-
-      var users = [];
-
-      // walk cursor
-      cursor.each(function (err, doc) {
-
-        // end
-        if (doc == null) {
-          return res.jsonp(users);
-        }
-
-        users.push(doc);
-      });
-    }
-  );
-});
+// DELETE
+// /**
+//  * list users (all users in the system, whatever is them status )
+//  * URL example:  METHOD: GET
+//  * http://localhost:3000/user/lista
+//  */
+// router.get('/listall', function (req, res, next) {
+//   // find user
+//   req.db.collection('users').find(
+//     {},
+//     function (err, cursor) {
+//
+//       // check error
+//       if (err) {
+//         return res.status(500).send(err.message);
+//       }
+//
+//       var users = [];
+//
+//       // walk cursor
+//       cursor.each(function (err, doc) {
+//
+//         // end
+//         if (doc == null) {
+//           return res.jsonp(users);
+//         }
+//
+//         users.push(doc);
+//       });
+//     }
+//   );
+// });
 
 /**
  * list ONE user (by Id of the user)
@@ -156,33 +140,21 @@ router.get('/listall', function (req, res, next) {
  *
  * Example: http://localhost:3000/user/57546d42ff435e591d083d04
  */
-router.get('/:user', function (req, res, next) {
-  var userId = req.params.user;
-  debug(userId);
+router.get('/:id', function (req, res, next) {
+  var userId = req.params.id;
 
   // find user
-  req.db.collection('users').find(
+  req.db.collection('users').findOne(
     { _id: new ObjectId(userId) },
+    function (err, doc) {
+      // if error, return 500
+      if (err) return res.status(500).send('Error when users.findOne ' + err.message);
 
-    function (err, cursor) {
+      // User not found
+      if (!doc) return res.status(404).send('Not found');
 
-      // check error
-      if (err) {
-        return res.status(500).send(err.message);
-      }
-
-      var user = [];
-
-      // walk cursor
-      cursor.each(function (err, doc) {
-
-        // end
-        if (doc == null) {
-          return res.jsonp(user);
-        }
-
-        user.push(doc);
-      });
+      debug(doc);
+      res.jsonp(doc);
     }
   );
 });
@@ -194,60 +166,36 @@ router.get('/:user', function (req, res, next) {
  * parameter:  user  (game id)
  *
  */
-router.post('/del', function (req, res) {
-
-  // check parameters
-  if (!req.body.user) {
-    // 400 - bad request
-    debug('** No Parameters. user required');
-    return res.status(400).send('Bad parameters. user required');
-
-  }
-
-  var userId = req.body.user;
+router.delete('/:id', function (req, res) {
+  var userId = req.params.id;
 
   // find game
   req.db.collection('users').findOne(
     { _id: new ObjectId(userId) },
     function (err, doc) {
 
-      // if error, return
-      if (err) {
-        // 500
-        return res.status(500).send(err.message);
-      }
+      // if error, return 500
+      if (err) return res.status(500).send('Error when users.findOne ' + err.message);
 
-      if (!doc) {
-        // Game not Found
-        return res.status(404).send('USER ' + req.body.user  + 'NOT exists');
-      }
+      // User not found
+      if (doc) return res.status(404).send('Not found');
 
       // game found -- UPdate status: set to 3 => Deleted
       req.db.collection('users').update(
         { _id: new ObjectId(userId) },
-        {
-          $set: { status: 3 }
-        },
+        { $set: { status: 3 } },
         true,
         true,
         function (err, doc) {
-          // if error, return
-          if (err) {
-            // 500
-            return res.status(500).send(err.message);
-          }
+          // if error, return 500
+          if (err) return res.status(500).send('Error when users.update ' + err.message);
 
-          res.jsonp(doc); // delete ENDs ; sends a response needed to END the Update.  Response with a record updated info
           debug(doc);
+          res.jsonp(doc);
         }
       );
     }
   ); // find one
-});
-
-/* GET users listing. */
-router.get('/', function (req, res, next) {
-  res.send('respond with a resource');
 });
 
 module.exports = router;
