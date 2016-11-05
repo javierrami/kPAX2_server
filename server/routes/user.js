@@ -1,6 +1,8 @@
 var express = require('express');
 var router = express.Router();
-var {ObjectId} = require('mongodb'); //like ObjectId=require('mongodb').ObjectId;
+var ObjectId = require('mongodb').ObjectId;
+
+const debug = require('debug')('app:user');
 
 /**
  * Add a new user
@@ -10,8 +12,8 @@ router.post('/', function (req, res) {
 	// check parameters
 	if (!req.body.login || !req.body.name) {
 		// 400 - bad request
-		console.log("LOGIN: %s", req.body.login);
-		console.log("NAME: %s", req.body.name);
+		debug("LOGIN: %s", req.body.login);
+		debug("NAME: %s", req.body.name);
 		return res.status(400).send('Bad parameters')
 	}
 
@@ -71,25 +73,25 @@ router.post('/', function (req, res) {
 
 router.get('/list', function(req, res, next) {
 
-	console.log("games/list endpoint! Query Chain passed: %s",req.query.q);
+	debug("/game/list. Query Chain passed: %s",req.query.q);
 
 	var userQuery = null;
 	if (typeof(req.query.q) != 'undefined' ) {
-		console.log('Query condition:q=  %s ', req.query.q);
+		debug('Query condition:q=  %s ', req.query.q);
 
 		try {
 			userQuery = JSON.parse(req.query.q);
 		}
 		catch (e) {
-			console.log(' Bad JSON format, NO Query Done!: NO records listed');
+			debug(' Bad JSON format, NO Query Done!: NO records listed');
 			userQuery = { '_id': null };
 		}
 	} else {
-		console.log(' q Query condition not defined: all records listed');
+		debug(' q Query condition not defined: all records listed');
 		userQuery = {};
 	};
 
-	console.log('JSON Query passed: ', userQuery);
+	debug('JSON Query passed: ', userQuery);
 
 	// find user
 	req.db.collection('users').find(
@@ -162,7 +164,7 @@ router.get('/listall', function(req, res, next) {
  */
 router.get('/:user', function(req, res, next) {
 	var userId = req.params.user;
-	console.log(userId);
+	debug(userId);
 	// find user
 	req.db.collection('users').find(
 	//		{"_id" : userId},
@@ -214,7 +216,7 @@ router.post('/del', function (req, res) {
 	// check parameters
 	if (!req.body.user) {
 		// 400 - bad request
-		console.log('** No Parameters. user required');
+		debug('** No Parameters. user required');
 		return res.status(400).send('Bad parameters. user required ')
 
 	}
@@ -260,7 +262,7 @@ router.post('/del', function (req, res) {
 
 
 			res.jsonp(doc); // delete ENDs ; sends a response needed to END the Update.  Response with a record updated info
-			console.log(doc)
+			debug(doc);
 
 			}
 

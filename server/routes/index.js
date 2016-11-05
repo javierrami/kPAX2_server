@@ -4,6 +4,7 @@ var router = express.Router();
 
 // ADD ROUTES
 router.use('/test', require('./test'));
+
 router.use('/user', require('./user'));
 router.use('/game', require('./games'));
 //router.use('/gamesx', require('./gamesx'));

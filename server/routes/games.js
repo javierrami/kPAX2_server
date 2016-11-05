@@ -1,6 +1,8 @@
 var express = require('express');
 var router = express.Router();
-var {ObjectId} = require('mongodb'); //like ObjectId=require('mongodb').ObjectId;
+var ObjectId = require('mongodb').ObjectId;
+
+const debug = require('debug')('app:games');
 
 /**
  * Add a new game
@@ -67,25 +69,25 @@ router.post('/', function (req, res) {
  */
 router.get('/list', function(req, res, next) {
 
-	console.log("games/list endpoint! Query Chain passed: %s",req.query.q);
+	debug("games/list endpoint! Query Chain passed: %s",req.query.q);
 
 	var gameQuery = null;
 	if (typeof(req.query.q) != 'undefined' ) {
-		console.log('Query condition:q=  %s ', req.query.q);
+		debug('Query condition:q=  %s ', req.query.q);
 
 		try {
 			gameQuery = JSON.parse(req.query.q);
 		}
 		catch (e) {
-			console.log(' Bad JSON format, NO Query Done!: NO records listed');
+			debug(' Bad JSON format, NO Query Done!: NO records listed');
 			gameQuery = { '_id': null };
 		}
 	} else {
-		console.log(' q Query condition not defined: all records listed');
+		debug(' q Query condition not defined: all records listed');
 		gameQuery = {};
 	};
 
-	console.log('JSON Query passed: ', gameQuery);
+	debug('JSON Query passed: ', gameQuery);
 
 	// find game
 	req.db.collection('games').find(
@@ -153,7 +155,7 @@ router.get('/listall', function(req, res, next) {
  */
 router.get('/:game', function(req, res, next) {
 	var gameId = req.params.game;
-	console.log(gameId);
+	debug(gameId);
 	// find game
 	req.db.collection('games').find(
 	//		{"_id" : gameId},
@@ -196,7 +198,7 @@ router.put('/like', function (req, res) {
 	// check parameters
 	if (!req.body.name) {
 		// 400 - bad request
-		console.log('** No Parameters. Game name required');
+		debug('** No Parameters. Game name required');
 		return res.status(400).send('Bad parameters. Game name required ')
 
 	}
@@ -235,7 +237,7 @@ router.put('/like', function (req, res) {
 
 
 			res.jsonp(doc); // put ENDs ; sends a response needed to END the Update.  Response with a record updated info
-			console.log(doc)
+			debug(doc);
 
 			}
 
@@ -264,7 +266,7 @@ router.post('/likeOld', function (req, res) {
 	// check parameters
 	if (!req.body.game || !req.body.user) {
 		// 400 - bad request
-		console.log('** No Parameters. Game name required');
+		debug('** No Parameters. Game name required');
 		return res.status(400).send('Bad parameters. Game name required ')
 
 	}
@@ -319,7 +321,7 @@ router.post('/likeOld', function (req, res) {
 
 
 			res.jsonp(doc); // post ENDs ; sends a response needed to END the Update.  Response with a record updated info
-			console.log(doc)
+			debug(doc);
 
 			}
 
@@ -348,7 +350,7 @@ router.post('/del', function (req, res) {
 	// check parameters
 	if (!req.body.game) {
 		// 400 - bad request
-		console.log('** No Parameters. Game name required');
+		debug('** No Parameters. Game name required');
 		return res.status(400).send('Bad parameters. Game Id required ')
 
 	}
@@ -394,7 +396,7 @@ router.post('/del', function (req, res) {
 
 
 			res.jsonp(doc); // delete ENDs ; sends a response needed to END the Update.  Response with a record updated info
-			console.log(doc)
+			debug(doc)
 
 			}
 
@@ -463,13 +465,13 @@ router.post('/:game/like', function (req, res) {
 	var gameId = req.params.game;
 	var userId = req.body.user;
 
-	console.log ('gameId: ' + gameId  + '\r\n');
-	console.log ('userId: ' + userId  + '\r\n');
+	debug ('gameId: ' + gameId  + '\r\n');
+	debug ('userId: ' + userId  + '\r\n');
 
 
 	if (!req.params.game || !req.body.user) {
 		// 400 - bad request
-		console.log('** No Parameters. gameId & userId required');
+		debug('** No Parameters. gameId & userId required');
 		return res.status(400).send('Bad parameters. gameId & userId required ')
 
 	}
@@ -515,7 +517,7 @@ router.post('/:game/like', function (req, res) {
 						// if NOT error, update
 						else if (doc) {
 							// Game + user like found
-							console.log('ATENTION PLEASE: The user: ' +  userId  + '  are repeating the like for the game:  ' + gameId + ' Nothing done!! \r\n')
+							debug('ATENTION PLEASE: The user: ' +  userId  + '  are repeating the like for the game:  ' + gameId + ' Nothing done!! \r\n')
 							// Do nothing here
 							return
 							//return res.status(404).send('This like is still reported Game: ' + gameId  + ' user ' + userId + '\r\n');
@@ -568,7 +570,7 @@ router.post('/:game/like', function (req, res) {
 
 
 			res.jsonp(doc); // post ENDs ; sends a response needed to END the Update.  Response with a record updated info
-			console.log(doc)
+			debug(doc);
 
 			}
 
@@ -599,13 +601,13 @@ router.post('/:game/unlike', function (req, res) {
 	var gameId = req.params.game;
 	var userId = req.body.user;
 
-	console.log ('gameId: ' + gameId  + '\r\n');
-	console.log ('userId: ' + userId  + '\r\n');
+	debug ('gameId: ' + gameId  + '\r\n');
+	debug ('userId: ' + userId  + '\r\n');
 
 
 	if (!req.params.game || !req.body.user) {
 		// 400 - bad request
-		console.log('** No Parameters. gameId & userId required');
+		debug('** No Parameters. gameId & userId required');
 		return res.status(400).send('Bad parameters. gameId & userId required ')
 
 	}
@@ -690,7 +692,7 @@ router.post('/:game/unlike', function (req, res) {
 							// el juego existe  y
 							// El usuario todavia no ha reportado ningun like --> UPdate nlikes +1
 							// registrar usuario y fecha/hora del like
-							console.log('ATENTION PLEASE: The user: ' +  userId  + '  never marked the game:  ' + gameId + ' with a like!. Nothing to do here!! \r\n')
+							debug('ATENTION PLEASE: The user: ' +  userId  + '  never marked the game:  ' + gameId + ' with a like!. Nothing to do here!! \r\n')
 							// do nothing HERE
 							return
 
@@ -705,7 +707,7 @@ router.post('/:game/unlike', function (req, res) {
 
 
 			res.jsonp(doc); // post ENDs ; sends a response needed to END the Update.  Response with a record updated info
-			console.log(doc)
+			debug(doc);
 
 			}
 

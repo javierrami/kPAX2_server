@@ -5,6 +5,8 @@ var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 
+const debug = require('debug')('app');
+
 // client for mongodb database
 const MongoClient = require('mongodb').MongoClient
 
@@ -12,15 +14,13 @@ var routes = require('./routes/index');
 
 var app = express();
 
-
-
 // connect to databse
 var database = null
 
 var url = 'mongodb://localhost:27017/kpax2';  // For working on local DB
 if (process.env.MONGODB_URL) {
   url = process.env.MONGODB_URL;
-  
+
 }
 
 //MongoClient.connect('mongodb://readwrite:1234@ds021462.mlab.com:21462/kpax2', function (err, db) {
@@ -31,7 +31,7 @@ MongoClient.connect(url, function (err, db) {
     else {
         // async!
         database = db
-        console.log("successfully connected to the database");
+        debug("successfully connected to the database");
     }
 })
 
@@ -50,7 +50,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // first thing to do, add db to the request
 app.use(function (req, res, next) {
-  console.log('eo')
+  debug('eo')
   req.db = database
   next()
 })
@@ -64,8 +64,8 @@ app.use(function(req, res, next) {
 
 // this middleware will be executed for every request to the app
 app.use(function (req, res, next) {
-  console.log('Aquest middleware s executa cada cop ');
-  console.log('Time: %d', Date.now());
+  debug('Aquest middleware s executa cada cop ');
+  debug('Time: %d', Date.now());
 
   next();
 });
