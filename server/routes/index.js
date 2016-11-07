@@ -1,16 +1,15 @@
 var express = require('express');
 var router = express.Router();
 
-
 // ADD ROUTES
 router.use('/test', require('./test'));
-router.use('/user', require('./user'));
-router.use('/game', require('./games'));
-//router.use('/gamesx', require('./gamesx'));
 
+router.use('/user', require('./user'));
+
+router.use('/game', require('./games'));
 
 /* GET home page. */
-router.get('/', function(req, res, next) {
+router.get('/', function (req, res, next) {
   res.render('index', { title: 'Express' });
 });
 
