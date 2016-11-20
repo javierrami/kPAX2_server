@@ -1,8 +1,24 @@
 
+const util = require('util')
 
-// module
 var internals = {};
+
 module.exports = internals;
+
+/**
+ * Our custom error (status, message)
+ */
+//function ApiError 
+
+
+internals.ApiError = function (status, message) {
+  Error.captureStackTrace(this, this.constructor);
+  this.status = this.constructor.status;
+  this.message = message;
+};
+
+util.inherits(internals.ApiError, Error);
+
 
 /**
  * check all parameters are not undefined or null

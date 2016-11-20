@@ -20,18 +20,19 @@ var database = null;
 var url = 'mongodb://localhost:27017/kpax2';  // For working on local DB
 if (process.env.MONGODB_URL) {
   url = process.env.MONGODB_URL;
-
 }
 
-//MongoClient.connect('mongodb://readwrite:1234@ds021462.mlab.com:21462/kpax2', function (err, db) {
+// connect to mongodb
+debug('Connecting to Mongodb', url);
 MongoClient.connect(url, function (err, db) {
   if (err) {
+    debug('ERROR', err);
     throw err;
-  } else {
-    // async!
-    database = db;
-    debug('successfully connected to the database');
   }
+
+  // async!
+  database = db;
+  debug('Successfully connected to the database');
 });
 
 // view engine setup
@@ -41,6 +42,12 @@ app.set('view engine', 'jade');
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
 app.use(logger('dev'));
+
+// app.use(function (req, res, next) {
+//   debug('RRR', req);
+//   next();
+// });
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
@@ -59,11 +66,10 @@ app.use(function (req, res, next) {
   next();
 });
 
-// this middleware will be executed for every request to the app
+// debug
 app.use(function (req, res, next) {
-  debug('Aquest middleware s executa cada cop ');
-  debug('Time: %d', Date.now());
-
+  debug('HEADERS', req.headers);
+  debug('BODY', req.body);
   next();
 });
 
@@ -72,6 +78,9 @@ app.use('/', routes);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
+
+  debug('NOT FOUND');
+
   var err = new Error('Not Found');
   err.status = 404;
   next(err);
@@ -83,6 +92,9 @@ app.use(function (req, res, next) {
 // will print stacktrace
 if (app.get('env') === 'development') {
   app.use(function (err, req, res, next) {
+
+    debug('ERR', err);
+
     res.status(err.status || 500);
     res.render('error', {
       message: err.message,
@@ -94,6 +106,9 @@ if (app.get('env') === 'development') {
 // production error handler
 // no stacktraces leaked to user
 app.use(function (err, req, res, next) {
+
+  debug('ERR', err);
+
   res.status(err.status || 500);
   res.render('error', {
     message: err.message,
