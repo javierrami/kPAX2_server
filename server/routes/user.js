@@ -2,7 +2,7 @@ var express = require('express');
 var router = express.Router();
 var ObjectId = require('mongodb').ObjectId;
 
-const utils = require('./utils');
+const utils = require('../lib/utils');
 
 const debug = require('debug')('app:user');
 
@@ -13,7 +13,7 @@ router.post('/', function (req, res) {
 
   // check parameters
   //DEL if (!req.body.login || !req.body.name) {
-  if (!checkParams(req, ['login', 'name'])) {
+  if (!utils.checkParams(req, ['login', 'name'])) {
     return res.status(400).send('Bad parameters');
   }
 
