@@ -13,7 +13,7 @@ The easiest way for download the server is by cloning the GIT repository:
 $ git clone https://github.com/drierat/kPAX2_server.git
 ```
 
-For working in the `deve` branch we specify the 
+For working in the `devel` branch we specify it: 
 
 ```bash
 $ git checkout devel
@@ -44,7 +44,4 @@ $ DEBUG=* MONGODB_URL="mongodb://readwrite:1234@ds021462.mlab.com:21462/kpax2" b
 
 For changing the port number edit the file `server/bin/www`
 
-
 ## API
-
-> TODO
