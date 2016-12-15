@@ -1,19 +1,19 @@
 
 # kPAX2_server
 
-This is the kPAX2 server running by default in port 8081
+This makes the kPAX2 server run by default in port 8081
 
 ## Execute
 
 ### Download
 
-The easiest way for download the server is by cloning the GIT repository:
+The easiest way to download the server is by cloning it from the GIT repository:
 
 ```bash
 $ git clone https://github.com/drierat/kPAX2_server.git
 ```
 
-For working in the `devel` branch we specify it: 
+In order to work in the `devel` branch we specify it: 
 
 ```bash
 $ git checkout devel
