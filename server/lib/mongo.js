@@ -8,7 +8,7 @@
  */
 
 var debug = require('debug')('app:lib:mongo');
-var ApiError = require('util').Error;
+var ApiError = require('./utils').ApiError;
 
 var internals = {};
 

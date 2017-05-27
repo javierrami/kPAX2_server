@@ -9,6 +9,7 @@ const mongo = require('../lib/mongo');
 const debug = require('debug')('app:category');
 
 /**
+ * TODO
  * Add a new game
  */
 router.post('/:id', function (req, res) {
@@ -67,7 +68,7 @@ router.post('/:id', function (req, res) {
 });
 
 /**
- * list games under a FREE condition
+ * List categories under a FREE condition
  * if no parameter passed, all games ar listed
  * the 'q' query must be a valid JSON query condition in MongoBD format
  * endpoint method: GET
@@ -116,7 +117,8 @@ router.get('/list', function (req, res, next) {
 
 //DEL
 // /**
-//  * list ONE game (by Id of the Game)
+//  * TODO
+//list ONE game (by Id of the Game)
 //  * parameter: game
 //  * GET /game/:game
 //  */
@@ -140,35 +142,6 @@ router.get('/list', function (req, res, next) {
 //   );
 // });
 
-/**
- * list ONE game (by Id of the Game)
- * parameter: game
- * GET /game/:game
- */
-router.get('/category/:id', function (req, res, next) {
-
-  mongo.get(req, res, 'gameCategories', req.params.id, function (err, doc) {
-    if (err) return;
-
-    res.jsonp(doc);
-  });
-});
-
-
-
-/**
- * list ONE game (by Id of the Game)
- * parameter: game
- * GET /game/:game
- */
-router.get('/:id', function (req, res, next) {
-
-  mongo.get(req, res, 'games', req.params.id, function (err, doc) {
-    if (err) return;
-
-    res.jsonp(doc);
-  });
-});
 
 /**
  *
@@ -207,145 +180,6 @@ router.delete('/:id', function (req, res) {
     }
   ); // find one
 });
-
-// **  like A (very complex nlike marker)
-
-/**
- *  'VERY Complex' ADD like && Plus user / Date info
- *  POST  /game/:game_id/like
- *   Parameters:
-        (in the URL) :   game       Game  identifier
-         (in the body):   user        user identifier
- *  nlike ++
- *  additional info of user and date of 'like' added
- *  if the like is still market : do nothing
- *   if the like is new  : save user * date/time info + increases by ONe the like counter !
- *
- *  IF user ya tiene un like registrado , no se repite ni se incrementa el marcador de likes
- *  ELSE  se registra el usuario y fecha/hora del registro y se incremeta en uno el contador de likes
- */
-router.post('/:game/like', function (req, res) {
-  var gameId = req.params.game;
-  var userId = req.body.user;
-
-  debug('gameId:', gameId);
-  debug('userId:', userId);
-
-  if (!req.params.game || !req.body.user) {
-    // 400 - bad request
-    debug('** No Parameters. gameId & userId required');
-    return res.status(400).send('Bad parameters. gameId & userId required ');
-  }
-
-  // find game
-  req.db.collection('games').findOne(
-    { guid: gameId },
-
-    function (err, doc) {
-      // if error, return 500
-      if (err) return res.status(500).send('Error when db.findOne ' + err.message);
-
-      // Game not found
-      if (!doc) return res.status(404).send('Not found');
-
-      // comprovam si l'usuari té ja aquest like enregistrat
-      req.db.collection('games').findOne(
-        { guid: gameId, 'ulike.uid': userId },
-        function (err, docLike) {
-          // if error, return 500
-          if (err) return res.status(500).send('Error when db.findOne ' + err.message);
-
-          // Already marked +1
-          if (docLike) return res.jsonp(doc);
-
-          req.db.collection('games').update(
-            { guid: gameId },
-            {
-              $inc: { nlikes: +1 },
-              $push: { ulike: { uid: userId, date: new Date() } }
-            },
-            true,
-            true,
-            function (err, doc) {
-              // if error, return 500
-              if (err) return res.status(500).send('Error when db.update ' + err.message);
-
-              debug(doc);
-              res.jsonp(doc);
-            }
-          );  // update end
-        }
-      ); // FindOne  (gameId + userId)
-    }
-  ); // find one
-});
-
-//  like A end
-
-router.post('/:game/unlike', function (req, res) {
-
-  // unmark the LIKE of a game & // decrease the like marker by one
-  // check parameters
-  //req.params.game
-
-  var gameId = req.params.game;
-  var userId = req.body.user;
-
-  debug('gameId:', gameId);
-  debug('userId:', userId);
-
-  if (!req.params.game || !req.body.user) {
-    // 400 - bad request
-    debug('** No Parameters. gameId & userId required');
-    return res.status(400).send('Bad parameters. gameId & userId required ');
-  }
-
-  // find game
-  req.db.collection('games').findOne(
-    { guid: gameId },
-
-    function (err, doc) {
-      // if error, return 500
-      if (err) return res.status(500).send('Error when db.findOne ' + err.message);
-
-      // Game not found
-      if (!doc) return res.status(404).send('Not found');
-
-      // game found -- UPdate nlikes -1
-      // comprovam si l'usuari té ja aquest like enregistrat
-      req.db.collection('games').findOne(
-        { guid: gameId, 'ulike.uid': userId },
-        function (err, docLike) {
-          // if error, return 500
-          if (err) return res.status(500).send('Error when db.findOne ' + err.message);
-
-          // If not document, user never marked +1
-          if (!docLike) return res.jsonp(doc);
-
-          // var userDateInfo = {'uid': userId, 'date': new Date()};
-          req.db.collection('games').update(
-            { guid: gameId },
-            {
-              $inc: { nlikes: -1 },
-              $pull: { ulike: { uid: userId } }
-            },
-            { multi: true }, // TODO: why multi?
-            function (err, doc) {
-              // if error, return 500
-              if (err) return res.status(500).send('Error when db.update ' + err.message);
-
-              debug(doc);
-              res.jsonp(doc);
-            }
-          );
-        }
-      ); // FindOne  (gameId + userId)
-    }
-  ); // find one
-});
-
-//  UNlike  end
-
 
 
 /**
